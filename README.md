@@ -48,12 +48,18 @@ We've woven together **four Dream Fragments** to create a cohesive surreal exper
 - **Background ambient soundscapes** — birds at the Taj Mahal, guards at Buckingham Palace
 - The machine doesn't just show — it *tells*, it *welcomes*, it *remembers*
 
----
-
-## ✨ Key Features
-
-### 🎬 **Cinematic Journey Flow**
-1. **Landing Scene** — Animated eye-opening effect with particles floating in consciousness
+ ---
+ 
+ ## ✨ Key Features
+ 
+ ### 🔥 **Hackathon Highlight: AI-Enhanced Voice Interaction**
+ - **Primary Hackathon Feature:** Real-time AI-enhanced voice interaction that lets users talk to the experience instead of just clicking.
+ - **Conversational Guide:** Voice-driven prompts and responses that adapt to the user's name, destination, and journey context.
+ - **Seamless Audio Orchestration:** Background music and ambient soundscapes intelligently fade while the AI guide speaks and resume when the interaction ends.
+ - This is the **core voice interaction feature** designed specifically to showcase Dream Globe at the DreamWare Hackathon 2025.
+ 
+ ### 🎬 **Cinematic Journey Flow**
+ 1. **Landing Scene** — Animated eye-opening effect with particles floating in consciousness
 2. **Hero Section** — Interactive 3D globe (Spline) that rotates as you contemplate
 3. **Dream Form** — Enter your name, nationality, capture your selfie with background removal
 4. **Passport Display** — Realistic passport opens with your photo, destinations, and stamps
