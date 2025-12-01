@@ -22,11 +22,6 @@ export default function GlobalLoader() {
                     <div className="absolute inset-0 animate-ping opacity-20">
                         <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-blue-400 to-purple-600"></div>
                     </div>
-                    {/* <div className="relative w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 p-1 shadow-2xl shadow-purple-500/50 flex items-center justify-center">
-                        <div className="w-full h-full rounded-full bg-[#0a0e27] flex items-center justify-center">
-                            <Sparkles className="w-16 h-16 text-blue-300 animate-pulse" />
-                        </div>
-                    </div> */}
                 </div>
 
                 {/* Loading Text */}
