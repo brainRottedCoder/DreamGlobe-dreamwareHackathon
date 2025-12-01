@@ -14,7 +14,6 @@ const NextCountryPage = () => {
   const [showEyeTransition, setShowEyeTransition] = useState(false);
 
   useEffect(() => {
-    // Get visited countries from localStorage
     const visited = localStorage.getItem('visitedCountries');
     const visitedList = visited ? JSON.parse(visited) : [];
     setVisitedCountries(visitedList);

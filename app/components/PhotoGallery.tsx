@@ -397,7 +397,6 @@ export default function PhotoGallery({
                       </div>
                     </div>
 
-                    {/* Photo History Count */}
                     {photoHistory.length > 1 && (
                       <p className="text-gray-400 text-sm">
                         You&apos;ve generated {photoHistory.length} photo{photoHistory.length > 1 ? 's' : ''} at {destinationName}
