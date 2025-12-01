@@ -26,13 +26,14 @@ type ChatMessage = { role: ChatRole; content: string };
 
 type SpeechRecognitionResultLike = { [index: number]: { transcript: string }; length: number };
 type SpeechRecognitionEventLike = { results: { [index: number]: SpeechRecognitionResultLike; length: number } };
+type SpeechRecognitionErrorEventLike = { error?: string; message?: string };
 
 interface SpeechRecognitionLike {
   continuous: boolean;
   interimResults: boolean;
   onstart: (() => void) | null;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
