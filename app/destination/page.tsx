@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MapPin, Plane } from 'lucide-react';
+import { MapPin, Plane, Mic, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getCountryByName, getRandomTravelVideo, COUNTRIES, Country } from '@/lib/data/destinations';
 import { hasPhotoBackground } from '@/lib/data/photoBackgrounds';
@@ -10,6 +10,119 @@ import PhotoGallery from '../components/PhotoGallery';
 import VideoTransition from '../components/VideoTransition';
 import EyeTransition from '../components/EyeTransition';
 import { getMusicManager } from '@/lib/utils/musicManager';
+
+// --- VOICE CONFIG & TYPES ---
+const GOOGLE_API_KEY = (process.env.NEXT_PUBLIC_GOOGLE_CLOUD_API_KEY || "").trim();
+
+const SYSTEM_PROMPT_TEMPLATE = `
+You are a knowledgeable and enthusiastic tour guide for {DESTINATION}.
+Voice: Friendly, engaging, and informative.
+Style: Keep responses concise (max 2-3 sentences) and interesting.
+Context: The user is currently visiting {DESTINATION} in a dream-like virtual travel experience.
+`;
+
+type ChatRole = "user" | "model";
+type ChatMessage = { role: ChatRole; content: string };
+
+type SpeechRecognitionResultLike = { [index: number]: { transcript: string }; length: number };
+type SpeechRecognitionEventLike = { results: { [index: number]: SpeechRecognitionResultLike; length: number } };
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+const getAudioContextClass = (): typeof AudioContext | null => {
+  if (typeof window === "undefined") return null;
+  const w = window as typeof window & { webkitAudioContext?: typeof AudioContext };
+  return window.AudioContext || w.webkitAudioContext || null;
+};
+
+const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
+  if (typeof window === "undefined") return null;
+  const w = window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor };
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+};
+
+const callGeminiText = async (history: ChatMessage[], message: string, destinationName: string, city: string): Promise<string> => {
+  const cleanKey = GOOGLE_API_KEY;
+  if (!cleanKey) throw new Error("No API key");
+
+  const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace(/{DESTINATION}/g, `${destinationName}${city ? `, ${city}` : ''}`);
+
+  const prompt = {
+    contents: [
+      ...(history || []).map((h: ChatMessage) => ({ role: h.role === "user" ? "user" : "model", parts: [{ text: h.content }] })),
+      { role: "user", parts: [{ text: message }] }
+    ],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: { maxOutputTokens: 150, temperature: 1.0 }
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(cleanKey)}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(prompt)
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || "Gemini API Error");
+  }
+  return (await res.json())?.candidates?.[0]?.content?.parts?.[0]?.text || "I am listening...";
+};
+
+const callGoogleTTS = async (text: string): Promise<string> => {
+  const cleanKey = GOOGLE_API_KEY;
+  if (!cleanKey) throw new Error("No Key");
+
+  const ssml = `
+    <speak>
+      <voice name="en-US-Journey-F">
+        <prosody rate="1.1" pitch="+2st">
+            ${text}
+        </prosody>
+      </voice>
+    </speak>
+  `;
+
+  const payload = {
+    input: { ssml },
+    voice: { languageCode: "en-US", name: "en-US-Journey-F" },
+    audioConfig: { audioEncoding: "MP3", effectsProfileId: ["headphone-class-device"] }
+  };
+
+  const res = await fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(cleanKey)}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+  );
+
+  if (!res.ok) throw new Error("Google TTS Failed");
+  const data = await res.json();
+  const binaryString = window.atob(data.audioContent);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes.buffer], { type: "audio/mpeg" }));
+};
+
+const speakNativeBrowser = (text: string, onEnd: () => void) => {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.pitch = 1.1;
+  utterance.rate = 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find(v => v.name.includes("Google") || v.name.includes("Female"));
+  if (preferredVoice) utterance.voice = preferredVoice;
+  utterance.onend = onEnd;
+  window.speechSynthesis.speak(utterance);
+};
 
 // Dynamically import StreetViewPanorama
 const StreetViewPanorama = dynamic(() => import('../components/StreetViewPanorama'), {
@@ -43,6 +156,18 @@ const DestinationContent = () => {
   const [audioDuration, setAudioDuration] = useState<number>(10); // Default 10 seconds
   const [remainingCountries, setRemainingCountries] = useState<Country[]>([]);
   const [showCountrySelection, setShowCountrySelection] = useState(false);
+
+  // Voice State
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("Ask Guide");
+  const [audioReady, setAudioReady] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const voiceAudioElementRef = useRef<HTMLAudioElement | null>(null);
+  const historyRef = useRef<ChatMessage[]>([]);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const speechTimeoutRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const dest = searchParams.get('destination');
@@ -182,9 +307,203 @@ const DestinationContent = () => {
     }
   }, [destinationData?.narrationAudio]);
 
-  const handleDestinationSelect = (destinationId: string) => {
-    if (!countryData) return;
+  // Voice Cleanup
+  useEffect(() => {
+    return () => {
+      if (speechTimeoutRef.current != null) window.clearTimeout(speechTimeoutRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { }
+      }
+    };
+  }, []);
 
+  const initAudio = () => {
+    if (audioContextRef.current) return;
+    const AudioContextClass = getAudioContextClass();
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const audio = new Audio();
+    audio.crossOrigin = "anonymous";
+
+    audioContextRef.current = ctx;
+    voiceAudioElementRef.current = audio;
+    setAudioReady(true);
+  };
+
+  const handleSpeak = async (text: string) => {
+    console.log('🎤 handleSpeak called with:', text);
+    if (!text.trim() || !destinationData) {
+      console.warn('🎤 Empty text or missing destination data');
+      return;
+    }
+
+    try {
+      if (!audioContextRef.current) initAudio();
+      if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume();
+    } catch (e) {
+      console.error('🎤 Audio Context Error:', e);
+    }
+
+    // Pause background narration if playing
+    if (audioRef.current && !audioRef.current.paused) {
+      console.log('🎤 Pausing narration');
+      audioRef.current.pause();
+    }
+
+    // Pause background music
+    try {
+      console.log('🎤 Pausing background music');
+      getMusicManager().pause();
+    } catch (e) {
+      console.error('🎤 Failed to pause music:', e);
+    }
+
+    const userMsg = { role: "user" as ChatRole, content: text };
+    historyRef.current.push(userMsg);
+    setMessages([...historyRef.current]);
+
+    setVoiceStatus("Thinking...");
+    setIsSpeaking(true);
+
+    try {
+      console.log('🎤 Calling Gemini API...');
+      const reply = await callGeminiText(historyRef.current, text, destinationData.name, destinationData.city);
+      console.log('🎤 Gemini Reply:', reply);
+
+      const assistantMsg = { role: "model" as ChatRole, content: reply };
+      historyRef.current.push(assistantMsg);
+      setMessages([...historyRef.current]);
+
+      setVoiceStatus("Speaking...");
+
+      try {
+        console.log('🎤 Calling Google TTS...');
+        const audioUrl = await callGoogleTTS(reply);
+        if (audioUrl && voiceAudioElementRef.current) {
+          const audio = voiceAudioElementRef.current;
+          audio.src = audioUrl;
+          audio.onended = () => {
+            console.log('🎤 TTS Ended');
+            setIsSpeaking(false);
+            setVoiceStatus("Ask Guide");
+            // Resume music
+            try {
+              console.log('🎤 Resuming background music');
+              getMusicManager().resume();
+            } catch (e) {
+              console.error('🎤 Failed to resume music:', e);
+            }
+          };
+          audio.onerror = (e) => {
+            console.error('🎤 Audio Playback Error:', e);
+            setIsSpeaking(false);
+            setVoiceStatus("Error");
+            getMusicManager().resume();
+          };
+          await audio.play();
+        }
+      } catch (ttsError) {
+        console.warn("🎤 Fallback TTS due to error:", ttsError);
+        speakNativeBrowser(reply, () => {
+          console.log('🎤 Native TTS Ended');
+          setIsSpeaking(false);
+          setVoiceStatus("Ask Guide");
+          getMusicManager().resume();
+        });
+      }
+    } catch (err) {
+      console.error('🎤 Voice Feature Error:', err);
+      setVoiceStatus("Error");
+      setIsSpeaking(false);
+      getMusicManager().resume();
+      setTimeout(() => setVoiceStatus("Ask Guide"), 2000);
+    }
+  };
+
+  const startListening = () => {
+    console.log('🎤 startListening called');
+    try {
+      if (!audioContextRef.current) initAudio();
+    } catch (e) {
+      console.error('🎤 Init Audio Error:', e);
+    }
+
+    const Rec = getSpeechRecognition();
+    if (!Rec) {
+      console.error('🎤 Speech recognition not supported');
+      alert("Speech recognition not supported");
+      return;
+    }
+
+    // Pause music while listening
+    try {
+      console.log('🎤 Pausing background music for listening');
+      getMusicManager().pause();
+    } catch (e) {
+      console.error('🎤 Failed to pause music:', e);
+    }
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) { console.error('🎤 Stop Rec Error:', e); }
+      recognitionRef.current = null;
+    }
+
+    const r: SpeechRecognitionLike = new Rec();
+    recognitionRef.current = r;
+    r.continuous = false;
+    r.interimResults = true;
+
+    r.onstart = () => {
+      console.log('🎤 Recognition started');
+      setVoiceStatus("Listening...");
+    };
+
+    let lastTranscript = "";
+    r.onresult = (event: SpeechRecognitionEventLike) => {
+      const results = event.results;
+      if (!results || results.length === 0) return;
+      const lastResult = results[results.length - 1];
+      if (!lastResult || !lastResult[0]) return;
+
+      lastTranscript = lastResult[0].transcript || "";
+      // console.log('🎤 Transcript:', lastTranscript); // Optional: log transcript
+
+      if (speechTimeoutRef.current != null) window.clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = window.setTimeout(() => {
+        if (lastTranscript.trim()) handleSpeak(lastTranscript.trim());
+        speechTimeoutRef.current = undefined;
+      }, 1000);
+    };
+
+    r.onerror = (event: any) => {
+      console.error('🎤 Recognition Error:', event);
+      setVoiceStatus("Error");
+      if (speechTimeoutRef.current != null) window.clearTimeout(speechTimeoutRef.current);
+
+      // Resume music on error
+      getMusicManager().resume();
+
+      setTimeout(() => setVoiceStatus("Ask Guide"), 2000);
+    };
+
+    r.onend = () => {
+      console.log('🎤 Recognition ended');
+      if (speechTimeoutRef.current == null && !isSpeaking) {
+        setVoiceStatus("Ask Guide");
+        // Resume music if we are not proceeding to speak
+        getMusicManager().resume();
+      }
+    };
+
+    try {
+      r.start();
+    } catch (e) {
+      console.error('🎤 Failed to start recognition:', e);
+      getMusicManager().resume();
+    }
+  };
+
+  const handleDestinationSelect = (destinationId: string) => {
     const selectedIndex = countryData.destinations.findIndex((d: any) => d.id === destinationId);
     if (selectedIndex !== -1) {
       const selectedDest = countryData.destinations[selectedIndex];
@@ -488,6 +807,19 @@ const DestinationContent = () => {
                   className="px-2.5 py-2 md:px-3 md:py-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-xl text-white/80 hover:text-white border border-white/10 hover:border-white/30 transition-all hover:scale-105"
                 >
                   <span className="text-xs">End</span>
+                </button>
+
+                {/* Voice Guide Button */}
+                <button
+                  onClick={startListening}
+                  disabled={isSpeaking}
+                  className={`flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 rounded-xl text-white font-semibold shadow-lg transition-all duration-300 hover:scale-105 ${isSpeaking
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-600 animate-pulse'
+                    : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500'
+                    }`}
+                >
+                  {isSpeaking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  <span className="text-xs md:text-sm">{voiceStatus}</span>
                 </button>
               </div>
             )}
