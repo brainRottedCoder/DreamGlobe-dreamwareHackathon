@@ -33,7 +33,6 @@ const NextCountryPage = () => {
     setSelectedCountry(country.id);
     setShowEyeTransition(true);
 
-    // After eye transition, navigate to plane scene with country
     setTimeout(() => {
       // Store selected country in localStorage
       localStorage.setItem('selectedCountry', country.name);
@@ -41,7 +40,6 @@ const NextCountryPage = () => {
       // Get current country (where we're departing from)
       const currentCountry = localStorage.getItem('currentCountry') || 'India';
 
-      // Navigate to plane with departure and arrival
       router.push(`/plane?departure=${encodeURIComponent(currentCountry)}&destination=${encodeURIComponent(country.name)}`);
     }, 1500);
   };
@@ -75,7 +73,6 @@ const NextCountryPage = () => {
 
       {/* Main Content */}
       <div className="relative z-10 container mx-auto px-4 py-10 sm:py-12 min-h-screen flex flex-col">
-        {/* Header */}
         <div className="text-center mb-10 sm:mb-12 space-y-5 sm:space-y-6 animate-fade-in">
           <div className="text-4xl sm:text-6xl md:text-7xl mb-3 sm:mb-4">✈️</div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-linear-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
