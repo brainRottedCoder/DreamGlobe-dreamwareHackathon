@@ -224,7 +224,7 @@ export default function PhotoGallery({
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-sm">
-          <div className="relative w-full max-w-7xl bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900
+          <div className="relative w-full max-w-7xl bg-linear-to-r from-gray-900 via-purple-900/30 to-gray-900
                           rounded-2xl shadow-2xl overflow-hidden border border-purple-500/30 my-4 max-h-[90vh] flex flex-col">
 
             {/* Close Button */}
@@ -362,7 +362,6 @@ export default function PhotoGallery({
                       />
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center w-full max-w-xl">
                       <button
                         onClick={() => downloadPhoto(currentPhoto)}
@@ -431,13 +430,12 @@ export default function PhotoGallery({
                   onClick={(e) => e.stopPropagation()}
                 />
 
-                {/* Download button in lightbox */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     downloadPhoto(selectedImage);
                   }}
-                  className="absolute bottom-4 right-4 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700
+                  className="absolute bottom-4 right-4 px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700
                              text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105
                              shadow-lg flex items-center gap-3"
                 >

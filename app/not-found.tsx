@@ -37,7 +37,7 @@ export default function NotFound() {
                         Dream Fragment Not Found
                     </h2>
                     <p className="text-lg text-blue-200/60 max-w-lg mx-auto leading-relaxed">
-                        You've wandered to the edge of the dreamscape. This memory doesn't exist, or perhaps it has faded into the waking world.
+                        You&apos;ve wandered to the edge of the dreamscape. This memory doesn&apos;t exist, or perhaps it has faded into the waking world.
                     </p>
                 </div>
 
@@ -61,7 +61,7 @@ export default function NotFound() {
             {/* Footer Quote */}
             <div className="absolute bottom-8 left-0 right-0 text-center">
                 <p className="text-white/20 text-sm font-light italic">
-                    "Not all those who wander are lost, but some dreams are elusive."
+                    &quot;Not all those who wander are lost, but some dreams are elusive&quot;
                 </p>
             </div>
         </div>
