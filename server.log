@@ -1,0 +1,12 @@
+
+> newdream@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.10 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1142ms
+ ○ Compiling /heroSection ...
+ GET /heroSection 200 in 8.8s (compile: 8.3s, render: 471ms)
