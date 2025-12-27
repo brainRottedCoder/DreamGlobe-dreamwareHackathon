@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getCountryById, getCountryByName } from '@/lib/data/destinations';
 import EyeTransition from '../components/EyeTransition';
 
 // Dynamically import to avoid SSR issues with Three.js
@@ -22,47 +21,62 @@ const FlightTransition = dynamic(() => import('../components/FlightTransition'),
 const FlightTransitionPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [travelData, setTravelData] = useState<{
-    countryName: string;
-    name: string;
-    nationality: string;
-  } | null>(null);
-  const [eyesClosed, setEyesClosed] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
 
-  useEffect(() => {
-    // Get travel data from URL params or localStorage
+  // Optimization: Derive state from searchParams immediately to avoid double render
+  // and initial loading state.
+  const paramsData = useMemo(() => {
     const destination = searchParams.get('destination');
     const name = searchParams.get('name');
     const departure = searchParams.get('departure'); // Where we're leaving from
     const nationality = searchParams.get('nationality'); // Original nationality (fallback)
 
-    console.log('Flight params:', { departure, destination, name, nationality });
-
     if (destination) {
       // Use departure if available, otherwise use nationality (for first flight)
       const startCountry = departure || nationality || 'American';
 
-      setTravelData({
+      return {
         countryName: destination,
         name: name || 'Traveler',
         nationality: startCountry, // This will be used as the departure country
-      });
-    } else {
-      // Try localStorage fallback
-      const stored = localStorage.getItem('dreamData');
-      if (stored) {
-        const data = JSON.parse(stored);
-        setTravelData({
+      };
+    }
+    return null;
+  }, [searchParams]);
+
+  const [localData, setLocalData] = useState<{
+    countryName: string;
+    name: string;
+    nationality: string;
+  } | null>(null);
+
+  const [eyesClosed, setEyesClosed] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    // Only check localStorage if we don't have params data
+    if (paramsData) {
+      console.log('Flight params (derived):', paramsData);
+      return;
+    }
+
+    // Try localStorage fallback
+    const stored = localStorage.getItem('dreamData');
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Defer state update to avoid synchronous render warning and allow browser to paint loading state if needed
+      setTimeout(() => {
+        setLocalData({
           countryName: data.destinations?.[0] || 'India',
           name: data.name || 'Traveler',
           nationality: data.nationality || 'American',
         });
-      } else {
-        router.push('/dreamForm');
-      }
+      }, 0);
+    } else {
+      router.push('/dreamForm');
     }
-  }, [searchParams, router]);
+  }, [paramsData, router]);
+
+  const travelData = paramsData || localData;
 
   const handleAnimationComplete = () => {
     console.log('Flight animation complete! Closing eyes before destination...');
