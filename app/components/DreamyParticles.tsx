@@ -11,6 +11,7 @@ interface Particle {
   size: number;
   opacity: number;
   color: string;
+  canvas: HTMLCanvasElement;
 }
 
 interface Star {
@@ -74,14 +75,49 @@ const DreamyParticles: React.FC = () => {
       const colors = ['#60A5FA', '#A78BFA', '#F472B6', '#FBBF24', '#34D399'];
 
       for (let i = 0; i < 50; i++) {
+        const size = Math.random() * 3 + 1;
+        const opacity = Math.random() * 0.5 + 0.2;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        // Pre-render particle to an offscreen canvas
+        // This avoids creating gradients and paths every frame
+        const pCanvas = document.createElement('canvas');
+        const glowRadius = size * 3;
+        const pSize = Math.ceil(glowRadius * 2);
+        pCanvas.width = pSize;
+        pCanvas.height = pSize;
+        const pCtx = pCanvas.getContext('2d');
+
+        if (pCtx) {
+          const center = pSize / 2;
+
+          // Draw glow
+          const gradient = pCtx.createRadialGradient(center, center, 0, center, center, glowRadius);
+          const alphaHex = Math.floor(opacity * 255).toString(16).padStart(2, '0');
+          gradient.addColorStop(0, `${color}${alphaHex}`);
+          gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+          pCtx.beginPath();
+          pCtx.arc(center, center, glowRadius, 0, Math.PI * 2);
+          pCtx.fillStyle = gradient;
+          pCtx.fill();
+
+          // Draw core particle
+          pCtx.beginPath();
+          pCtx.arc(center, center, size, 0, Math.PI * 2);
+          pCtx.fillStyle = color;
+          pCtx.fill();
+        }
+
         particlesRef.current.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           vx: (Math.random() - 0.5) * 0.5,
           vy: (Math.random() - 0.5) * 0.5,
-          size: Math.random() * 3 + 1,
-          opacity: Math.random() * 0.5 + 0.2,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          size,
+          opacity,
+          color,
+          canvas: pCanvas,
         });
       }
     };
@@ -118,28 +154,10 @@ const DreamyParticles: React.FC = () => {
         if (particle.y < 0) particle.y = canvas.height;
         if (particle.y > canvas.height) particle.y = 0;
 
-        // Draw particle with glow effect
-        const gradient = ctx.createRadialGradient(
-          particle.x,
-          particle.y,
-          0,
-          particle.x,
-          particle.y,
-          particle.size * 3
-        );
-        gradient.addColorStop(0, `${particle.color}${Math.floor(particle.opacity * 255).toString(16).padStart(2, '0')}`);
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Draw core particle
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color;
-        ctx.fill();
+        // Draw particle using cached canvas
+        // Offset by half size to center it
+        const offset = particle.size * 3;
+        ctx.drawImage(particle.canvas, particle.x - offset, particle.y - offset);
       });
 
       animationFrameRef.current = requestAnimationFrame(animate);
