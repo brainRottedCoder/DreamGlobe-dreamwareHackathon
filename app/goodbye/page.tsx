@@ -68,9 +68,8 @@ const GoodbyePage = () => {
 
       {/* Main content */}
       <div
-        className={`relative z-10 text-center space-y-6 sm:space-y-8 px-4 sm:px-8 transition-all duration-1000 ${
-          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        }`}
+        className={`relative z-10 text-center space-y-6 sm:space-y-8 px-4 sm:px-8 transition-all duration-1000 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}
       >
         {/* Animated farewell icon */}
         <div className="flex justify-center">
@@ -102,12 +101,12 @@ const GoodbyePage = () => {
         </div>
 
         {/* Developers Section */}
-        {/* <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 backdrop-blur-xl rounded-3xl p-5 sm:p-8 border border-white/10 shadow-2xl shadow-blue-500/20 max-w-3xl mx-auto">
+        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 backdrop-blur-xl rounded-3xl p-5 sm:p-8 border border-white/10 shadow-2xl shadow-blue-500/20 max-w-3xl mx-auto">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent mb-4 sm:mb-6">
             Meet the Developers
           </h2>
 
-          
+
           <div className="mb-4 sm:mb-6 rounded-2xl overflow-hidden border-2 border-white/20 shadow-xl">
             <img
               src="/team-photo.jpg"
@@ -116,20 +115,20 @@ const GoodbyePage = () => {
             />
           </div>
 
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
-           
+
             <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:border-green-400/50 transition-all hover:scale-105">
               <div className="text-center space-y-2">
                 <h3 className="text-base sm:text-lg md:text-xl font-bold text-green-300">Shubh Varshney</h3>
                 <div className="space-y-1">
                   <p className="text-xs sm:text-sm text-green-200/80">Deployment</p>
-                  <p className="text-xs sm:text-sm text-green-200/80">Debugger</p>
+                  <p className="text-xs sm:text-sm text-green-200/80">Full Stack Developer</p>
                 </div>
               </div>
             </div>
 
-            
+
             <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-md rounded-2xl p-4 border-2 border-blue-400/50 hover:border-blue-400/80 transition-all hover:scale-105 shadow-lg shadow-blue-500/30">
               <div className="text-center space-y-2">
                 <h3 className="text-base sm:text-lg md:text-xl font-bold text-blue-300">Vedant Gupta</h3>
@@ -141,7 +140,7 @@ const GoodbyePage = () => {
               </div>
             </div>
 
-            
+
             <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:border-pink-400/50 transition-all hover:scale-105">
               <div className="text-center space-y-2">
                 <h3 className="text-base sm:text-lg md:text-xl font-bold text-pink-300">Yanshu Varshney</h3>
@@ -152,7 +151,7 @@ const GoodbyePage = () => {
               </div>
             </div>
           </div>
-        </div> */}
+        </div>
 
         {/* Call to action */}
         <div className="space-y-4 pt-6 sm:pt-8">
