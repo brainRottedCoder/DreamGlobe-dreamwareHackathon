@@ -11,6 +11,7 @@ interface Particle {
   size: number;
   opacity: number;
   color: string;
+  gradient?: CanvasGradient;
 }
 
 interface Star {
@@ -43,7 +44,7 @@ const DreamyParticles: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
     // Set canvas size
@@ -74,14 +75,26 @@ const DreamyParticles: React.FC = () => {
       const colors = ['#60A5FA', '#A78BFA', '#F472B6', '#FBBF24', '#34D399'];
 
       for (let i = 0; i < 50; i++) {
+        const size = Math.random() * 3 + 1;
+        const opacity = Math.random() * 0.5 + 0.2;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        // Create cached gradient for this particle
+        // We create it at (0,0) and will translate the context to draw it
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 3);
+        const alphaHex = Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        gradient.addColorStop(0, `${color}${alphaHex}`);
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
         particlesRef.current.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
           vx: (Math.random() - 0.5) * 0.5,
           vy: (Math.random() - 0.5) * 0.5,
-          size: Math.random() * 3 + 1,
-          opacity: Math.random() * 0.5 + 0.2,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          size,
+          opacity,
+          color,
+          gradient,
         });
       }
     };
@@ -118,28 +131,26 @@ const DreamyParticles: React.FC = () => {
         if (particle.y < 0) particle.y = canvas.height;
         if (particle.y > canvas.height) particle.y = 0;
 
-        // Draw particle with glow effect
-        const gradient = ctx.createRadialGradient(
-          particle.x,
-          particle.y,
-          0,
-          particle.x,
-          particle.y,
-          particle.size * 3
-        );
-        gradient.addColorStop(0, `${particle.color}${Math.floor(particle.opacity * 255).toString(16).padStart(2, '0')}`);
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        // Optimization: Use cached gradient and context translation
+        // This avoids creating new RadialGradient objects and parsing color strings every frame
+        ctx.save();
+        ctx.translate(particle.x, particle.y);
 
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
+        // Draw particle with glow effect using cached gradient
+        if (particle.gradient) {
+            ctx.fillStyle = particle.gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, particle.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Draw core particle
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
       });
 
       animationFrameRef.current = requestAnimationFrame(animate);
